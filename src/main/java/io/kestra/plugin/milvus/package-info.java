@@ -1,7 +1,5 @@
 @PluginSubGroup(
-    title = "Milvus",
-    description = "Milvus plugin for Kestra",
-    categories = PluginSubGroup.PluginCategory.DATA
+    title = "Milvus", description = "Manage collections and perform vector insert, upsert, search, and delete operations against a Milvus or Zilliz Cloud vector database.", categories = { PluginSubGroup.PluginCategory.AI, PluginSubGroup.PluginCategory.DATA }
 )
 package io.kestra.plugin.milvus;
 

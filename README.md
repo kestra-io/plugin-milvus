@@ -18,35 +18,23 @@
 
 <br />
 
-<p align="center">
-  <a href="https://twitter.com/kestra_io" style="margin: 0 10px;">
-        <img src="https://kestra.io/twitter.svg" alt="twitter" width="35" height="25" /></a>
-  <a href="https://www.linkedin.com/company/kestra/" style="margin: 0 10px;">
-        <img src="https://kestra.io/linkedin.svg" alt="linkedin" width="35" height="25" /></a>
-  <a href="https://www.youtube.com/@kestra-io" style="margin: 0 10px;">
-        <img src="https://kestra.io/youtube.svg" alt="youtube" width="35" height="25" /></a>
-</p>
-
-<br />
-<p align="center">
-    <a href="https://go.kestra.io/video/product-overview" target="_blank">
-        <img src="https://kestra.io/startvideo.png" alt="Get started in 3 minutes with Kestra" width="640px" />
-    </a>
-</p>
-<p align="center" style="color:grey;"><i>Get started with Kestra in 3 minutes.</i></p>
-
 # Kestra Milvus Plugin
 
 ## Why
 
-- What user problem does this solve? Teams need a concrete starting point for building and validating new Kestra plugins without recreating the same project scaffolding from scratch.
-- Why would a team adopt this plugin in a workflow? It gives plugin authors a ready-made reference repo they can adapt alongside their own build, test, and publishing workflow.
-- What operational/business outcome does it enable? It shortens plugin delivery time, reduces setup mistakes, and makes internal or partner plugin development more repeatable.
+- Teams building RAG pipelines and semantic search workflows need to manage [Milvus](https://milvus.io/) vector collections and run vector operations as part of a Kestra flow, alongside the rest of their data pipeline.
+- Without a dedicated plugin, this requires custom HTTP or script tasks to call the Milvus SDK directly, duplicated across every flow that needs it.
+- This plugin lets a flow create collections, upsert embeddings, run similarity search, and delete rows against a self-hosted Milvus instance or Zilliz Cloud, using the same `Property<T>` and `FetchType` conventions as the rest of Kestra's plugin ecosystem.
 
 ## What
 
-- Provides plugin components under `io.kestra.plugin.milvus`.
-- Includes classes such as `Example`, `Trigger`.
+Provides plugin components under `io.kestra.plugin.milvus`:
+
+- `CreateCollection` — creates a collection with a single vector field and a primary key field, using Milvus's quick-setup schema.
+- `Upsert` — inserts or updates rows in configurable batch sizes, from an inline list or a Kestra internal storage URI.
+- `Search` — runs an approximate nearest-neighbor vector similarity search, optionally narrowed with a scalar filter expression.
+- `Delete` — deletes rows by primary key IDs or by a scalar filter expression.
+- `DropCollection` — permanently deletes a collection and all of its rows.
 
 ## Running Kestra locally with this plugin
 
@@ -56,7 +44,7 @@
 
 ### Plugins folder gotcha
 
-Mounting a host folder onto `/app/plugins/` replaces the container's plugins directory rather than adding to it. Core plugins (the ones logged as `Registered N core plugins`) are compiled into Kestra itself and aren't affected, but any additional plugin normally bundled in the base image under `/app/plugins/` (e.g. the Python script plugin) gets hidden once the mount is in place. If a flow you're testing depends on another plugin, copy its jar into `build/libs/` too before starting the container.
+Mounting a host folder onto `/app/plugins/` replaces the container's plugins directory rather than adding to it. Core plugins (the ones logged as `Registered N core plugins`) are compiled into Kestra itself and aren't affected, but any additional plugin normally bundled in the base image under `/app/plugins/` gets hidden once the mount is in place. If a flow you're testing depends on another plugin, copy its jar into `build/libs/` too before starting the container.
 
 ### JFR startup error
 
@@ -65,6 +53,14 @@ On some hosts, `command: server local` fails with:
 Unable to create JFR repository directory using base location (/tmp)
 ```
 `docker-compose.yml` works around this by mounting `/tmp` as `tmpfs`. If you build your own compose file or run Kestra via `docker run`, add the same workaround, e.g. `-v /tmp:/tmp` or `--tmpfs /tmp`. Tracked upstream in [kestra-io/kestra#17405](https://github.com/kestra-io/kestra/issues/17405).
+
+## Running the tests
+
+Tests use [Testcontainers](https://testcontainers.com/) to spin up a real `milvusdb/milvus` container — Docker must be running locally:
+
+```bash
+./gradlew test
+```
 
 ## Documentation
 * Full documentation can be found under: [kestra.io/docs](https://kestra.io/docs)
