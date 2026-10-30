@@ -8,6 +8,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.milvus.v2.service.collection.request.DropCollectionReq;
+import io.milvus.v2.service.collection.request.HasCollectionReq;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -59,9 +60,15 @@ public class DropCollection extends AbstractMilvus implements RunnableTask<VoidO
 
         var client = this.buildClient(runContext);
         try {
+            var existed = client.hasCollection(HasCollectionReq.builder().collectionName(rCollectionName).build());
+
             client.dropCollection(DropCollectionReq.builder().collectionName(rCollectionName).build());
 
-            runContext.logger().info("Dropped Milvus collection '{}'", rCollectionName);
+            if (existed) {
+                runContext.logger().info("Dropped Milvus collection '{}'", rCollectionName);
+            } else {
+                runContext.logger().info("Milvus collection '{}' did not exist, nothing was dropped", rCollectionName);
+            }
 
             return null;
         } finally {

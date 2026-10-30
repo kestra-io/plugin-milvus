@@ -9,6 +9,7 @@ import io.kestra.core.models.tasks.common.FetchOutput;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
+import io.milvus.v2.common.ConsistencyLevel;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -113,6 +114,14 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
     @PluginProperty(group = "main")
     private Property<FetchType> fetchType = Property.ofValue(FetchType.FETCH);
 
+    @Schema(
+        title = "Consistency level",
+        description = """
+            The consistency level for this search. Unset by default, in which case the collection's own configured level applies (Bounded for quick-setup collections), which may not reflect a write that just completed. Set to STRONG to always read the latest writes, at the cost of search latency."""
+    )
+    @PluginProperty(group = "processing")
+    private Property<ConsistencyLevel> consistencyLevel;
+
     @Override
     public FetchOutput run(RunContext runContext) throws Exception {
         var rCollectionName = runContext.render(this.collectionName).as(String.class).orElseThrow(() -> new IllegalArgumentException("'collectionName' is required"));
@@ -125,6 +134,7 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
         var rOutputFields = runContext.render(this.outputFields).asList(String.class);
         var rPartitionNames = runContext.render(this.partitionNames).asList(String.class);
         var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
+        var rConsistencyLevel = runContext.render(this.consistencyLevel).as(ConsistencyLevel.class).orElse(null);
 
         var queryVector = rVector.stream().map(Double::floatValue).toList();
 
@@ -142,6 +152,9 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
             }
             if (!rPartitionNames.isEmpty()) {
                 requestBuilder.partitionNames(rPartitionNames);
+            }
+            if (rConsistencyLevel != null) {
+                requestBuilder.consistencyLevel(rConsistencyLevel);
             }
 
             var response = client.search(requestBuilder.build());

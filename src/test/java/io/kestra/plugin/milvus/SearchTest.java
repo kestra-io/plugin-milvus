@@ -2,11 +2,13 @@ package io.kestra.plugin.milvus;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
+import io.milvus.v2.common.ConsistencyLevel;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.exception.MilvusClientException;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DropCollectionReq;
+import io.milvus.v2.service.vector.request.DeleteReq;
 import io.milvus.v2.service.vector.request.UpsertReq;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,6 +145,33 @@ public class SearchTest extends MilvusTest {
         assertThat(output, notNullValue());
         assertThat(output.getSize(), greaterThan(0L));
         assertThat(output.getRows().getFirst(), notNullValue());
+    }
+
+    @Test
+    void runWithStrongConsistencyLevelSeesImmediateDelete() throws Exception {
+        var runContext = runContextFactory.of();
+
+        var client = milvusClient();
+        try {
+            client.delete(DeleteReq.builder().collectionName(collectionName).ids(List.of(1)).build());
+        } finally {
+            client.close();
+        }
+
+        var task = Search.builder()
+            .uri(Property.ofValue(uri()))
+            .collectionName(Property.ofValue(collectionName))
+            .vector(Property.ofValue(List.of(0.05, 0.61, 0.76, 0.74)))
+            .filter(Property.ofValue("id == 1"))
+            .limit(Property.ofValue(10))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .consistencyLevel(Property.ofValue(ConsistencyLevel.STRONG))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, notNullValue());
+        assertThat(output.getSize(), is(0L));
     }
 
     @Test
