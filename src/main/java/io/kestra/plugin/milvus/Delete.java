@@ -21,7 +21,8 @@ import java.util.List;
 @NoArgsConstructor
 @Schema(
     title = "Delete rows from a Milvus collection",
-    description = "Deletes rows by a list of primary key IDs, or by a scalar filter expression. Exactly one of ids or filter must be set."
+    description = """
+        Deletes rows by a list of primary key IDs, or by a scalar filter expression. Exactly one of ids or filter must be set."""
 )
 @Plugin(
     examples = {
@@ -62,7 +63,8 @@ import java.util.List;
 public class Delete extends AbstractMilvus implements RunnableTask<Delete.Output> {
     @Schema(
         title = "Collection name",
-        description = "The name of the collection to delete rows from."
+        description = """
+            The name of the collection to delete rows from."""
     )
     @NotNull
     @PluginProperty(group = "main")

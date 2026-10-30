@@ -30,7 +30,8 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
 
     @Schema(
         title = "Milvus server URI",
-        description = "The URI of the Milvus server or Zilliz Cloud endpoint, e.g. http://localhost:19530."
+        description = """
+            The URI of the Milvus server or Zilliz Cloud endpoint, e.g. http://localhost:19530."""
     )
     @NotNull
     @PluginProperty(group = "connection")
@@ -38,7 +39,8 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
 
     @Schema(
         title = "API token",
-        description = "The API token for authentication, typically used with Zilliz Cloud or a Milvus instance with token-based auth enabled."
+        description = """
+            The API token for authentication, typically used with Zilliz Cloud or a Milvus instance with token-based auth enabled."""
     )
     @PluginProperty(group = "connection", secret = true)
     @ToString.Exclude
@@ -46,14 +48,16 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
 
     @Schema(
         title = "Username",
-        description = "Username for a self-hosted Milvus instance with username/password authentication enabled. Leave unset if using a token or an unauthenticated instance."
+        description = """
+            Username for a self-hosted Milvus instance with username/password authentication enabled. Leave unset if using a token or an unauthenticated instance."""
     )
     @PluginProperty(group = "connection")
     protected Property<String> username;
 
     @Schema(
         title = "Password",
-        description = "Password for a self-hosted Milvus instance with username/password authentication enabled."
+        description = """
+            Password for a self-hosted Milvus instance with username/password authentication enabled."""
     )
     @PluginProperty(group = "connection", secret = true)
     @ToString.Exclude

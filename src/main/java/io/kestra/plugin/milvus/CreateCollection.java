@@ -22,7 +22,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Create a Milvus collection",
-    description = "Creates a collection with a single vector field and a primary key field, using Milvus's quick-setup schema. For a custom multi-field schema, create the collection with the Milvus SDK or console first and use the Upsert, Search, and Delete tasks against it directly."
+    description = """
+        Creates a collection with a single vector field and a primary key field, using Milvus's quick-setup schema. For a custom multi-field schema, create the collection with the Milvus SDK or console first and use the Upsert, Search, and Delete tasks against it directly."""
 )
 @Plugin(
     examples = {
@@ -47,7 +48,8 @@ import lombok.experimental.SuperBuilder;
 public class CreateCollection extends AbstractMilvus implements RunnableTask<VoidOutput> {
     @Schema(
         title = "Collection name",
-        description = "The name of the collection to create."
+        description = """
+            The name of the collection to create."""
     )
     @NotNull
     @PluginProperty(group = "main")

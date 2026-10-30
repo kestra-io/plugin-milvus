@@ -24,7 +24,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Drop a Milvus collection",
-    description = "Permanently deletes a collection and all of its rows. This cannot be undone."
+    description = """
+        Permanently deletes a collection and all of its rows. This cannot be undone. If the collection does not exist, the task succeeds without doing anything."""
 )
 @Plugin(
     examples = {
@@ -48,7 +49,8 @@ import lombok.experimental.SuperBuilder;
 public class DropCollection extends AbstractMilvus implements RunnableTask<VoidOutput> {
     @Schema(
         title = "Collection name",
-        description = "The name of the collection to permanently delete."
+        description = """
+            The name of the collection to permanently delete."""
     )
     @NotNull
     @PluginProperty(group = "main")

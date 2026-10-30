@@ -28,7 +28,8 @@ import java.util.Map;
 @NoArgsConstructor
 @Schema(
     title = "Insert or update rows in a Milvus collection",
-    description = "Upserts rows in configurable batch sizes. Each row is a flat map with the collection's vector field, primary key field (unless auto-generated), and any scalar fields. Reads from an inline list or a Kestra internal storage URI."
+    description = """
+        Upserts rows in configurable batch sizes. Each row is a flat map with the collection's vector field, primary key field (unless auto-generated), and any scalar fields. Reads from an inline list or a Kestra internal storage URI."""
 )
 @Plugin(
     examples = {
@@ -59,7 +60,8 @@ import java.util.Map;
 public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output> {
     @Schema(
         title = "Collection name",
-        description = "The name of the collection to upsert rows into."
+        description = """
+            The name of the collection to upsert rows into."""
     )
     @NotNull
     @PluginProperty(group = "main")

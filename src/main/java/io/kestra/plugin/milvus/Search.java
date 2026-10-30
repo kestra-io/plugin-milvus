@@ -9,7 +9,6 @@ import io.kestra.core.models.tasks.common.FetchOutput;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.milvus.v2.common.ConsistencyLevel;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,7 +32,8 @@ import java.util.Map;
 @NoArgsConstructor
 @Schema(
     title = "Search for similar vectors in a Milvus collection",
-    description = "Runs an approximate nearest-neighbor vector similarity search, optionally narrowed with a scalar filter expression."
+    description = """
+        Runs an approximate nearest-neighbor vector similarity search, optionally narrowed with a scalar filter expression."""
 )
 @Plugin(
     examples = {
@@ -59,7 +59,8 @@ import java.util.Map;
 public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> {
     @Schema(
         title = "Collection name",
-        description = "The name of the collection to search."
+        description = """
+            The name of the collection to search."""
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -67,7 +68,8 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
     @Schema(
         title = "Query vector",
-        description = "The dense vector to search nearest neighbors for, as a list of numbers matching the collection's vector dimension."
+        description = """
+            The dense vector to search nearest neighbors for, as a list of numbers matching the collection's vector dimension."""
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -84,7 +86,8 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
     @Schema(
         title = "Scalar filter expression",
-        description = "A Milvus boolean filter expression narrowing the search to rows matching the condition, e.g. \"city == 'Berlin'\". Unset by default (no filter applied)."
+        description = """
+            A Milvus boolean filter expression narrowing the search to rows matching the condition, e.g. "city == 'Berlin'". Unset by default (no filter applied)."""
     )
     @PluginProperty(group = "processing")
     private Property<String> filter;
@@ -117,7 +120,12 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
     @Schema(
         title = "Consistency level",
         description = """
-            The consistency level for this search. Unset by default, in which case the collection's own configured level applies (Bounded for quick-setup collections), which may not reflect a write that just completed. Set to STRONG to always read the latest writes, at the cost of search latency."""
+            The consistency level for this search. Unset by default, in which case the collection's own configured level applies (Bounded for quick-setup collections). One of:
+            - STRONG: reads always see the latest data after a write completes.
+            - SESSION: reads within the same session see the effects of writes from that session.
+            - BOUNDED: reads see acknowledged writes and tolerate bounded staleness.
+            - EVENTUALLY: reads are eventually consistent and may serve stale data.
+            Set to STRONG when searching right after an Upsert or Delete, at the cost of search latency."""
     )
     @PluginProperty(group = "processing")
     private Property<ConsistencyLevel> consistencyLevel;
@@ -154,7 +162,7 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
                 requestBuilder.partitionNames(rPartitionNames);
             }
             if (rConsistencyLevel != null) {
-                requestBuilder.consistencyLevel(rConsistencyLevel);
+                requestBuilder.consistencyLevel(rConsistencyLevel.toSdk());
             }
 
             var response = client.search(requestBuilder.build());
