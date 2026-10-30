@@ -8,8 +8,6 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.milvus.v2.client.MilvusClientV2;
-import io.milvus.v2.common.DataType;
-import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -49,7 +47,8 @@ import lombok.experimental.SuperBuilder;
 )
 public class CreateCollection extends AbstractMilvus implements RunnableTask<VoidOutput> {
     @Schema(
-        title = "Collection name"
+        title = "Collection name",
+        description = "The name of the collection to create."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -57,29 +56,32 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Vector dimension",
-        description = "The number of dimensions of the vectors stored in this collection's vector field."
+        description = """
+            The number of dimensions of the vectors stored in this collection's vector field. Must be between 1 and 32768."""
     )
     @NotNull
     @PluginProperty(group = "main")
     private Property<@Min(1) @Max(32768) Integer> dimension;
 
     @Schema(
-        title = "Collection description"
+        title = "Collection description",
+        description = "A free-text description of the collection, stored as Milvus collection metadata. Defaults to empty."
     )
     @PluginProperty(group = "main")
     private Property<String> collectionDescription;
 
     @Schema(
         title = "Metric type",
-        description = "The similarity metric used for vector search on this collection."
+        description = """
+            The similarity metric used for vector search on this collection. One of COSINE, L2 or IP. Defaults to COSINE."""
     )
     @Builder.Default
     @PluginProperty(group = "main")
-    private Property<IndexParam.MetricType> metricType = Property.ofValue(IndexParam.MetricType.COSINE);
+    private Property<MetricType> metricType = Property.ofValue(MetricType.COSINE);
 
     @Schema(
         title = "Primary field name",
-        description = "The name of the primary key field."
+        description = "The name of the primary key field. Defaults to \"id\"."
     )
     @Builder.Default
     @PluginProperty(group = "processing")
@@ -87,22 +89,24 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Primary key type",
-        description = "The data type of the primary key field. Int64 is auto-incrementing when autoId is true; VarChar requires the caller to supply an id on insert."
+        description = """
+            The data type of the primary key field. One of INT64 (auto-incrementing when autoId is true) or VARCHAR (requires the caller to supply an id on insert). Defaults to INT64."""
     )
     @Builder.Default
     @PluginProperty(group = "processing")
-    private Property<DataType> idType = Property.ofValue(DataType.Int64);
+    private Property<IdType> idType = Property.ofValue(IdType.INT64);
 
     @Schema(
         title = "Auto-generate IDs",
-        description = "When true, Milvus assigns the primary key automatically and it must be omitted on insert. Only valid when idType is Int64."
+        description = "When true, Milvus assigns the primary key automatically and it must be omitted on insert. Only valid when idType is INT64. Defaults to false."
     )
     @Builder.Default
     @PluginProperty(group = "processing")
     private Property<Boolean> autoId = Property.ofValue(false);
 
     @Schema(
-        title = "Vector field name"
+        title = "Vector field name",
+        description = "The name of the vector field. Defaults to \"vector\"."
     )
     @Builder.Default
     @PluginProperty(group = "processing")
@@ -110,24 +114,24 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        MilvusClientV2 client = this.buildClient(runContext);
+        var client = this.buildClient(runContext);
         try {
             var rCollectionName = runContext.render(this.collectionName).as(String.class).orElseThrow(() -> new IllegalArgumentException("'collectionName' is required"));
             var rDimension = runContext.render(this.dimension).as(Integer.class).orElseThrow(() -> new IllegalArgumentException("'dimension' is required"));
             var rDescription = runContext.render(this.collectionDescription).as(String.class).orElse("");
-            var rMetricType = runContext.render(this.metricType).as(IndexParam.MetricType.class).orElse(IndexParam.MetricType.COSINE);
+            var rMetricType = runContext.render(this.metricType).as(MetricType.class).orElse(MetricType.COSINE);
             var rPrimaryFieldName = runContext.render(this.primaryFieldName).as(String.class).orElse("id");
-            var rIdType = runContext.render(this.idType).as(DataType.class).orElse(DataType.Int64);
+            var rIdType = runContext.render(this.idType).as(IdType.class).orElse(IdType.INT64);
             var rAutoId = runContext.render(this.autoId).as(Boolean.class).orElse(false);
             var rVectorFieldName = runContext.render(this.vectorFieldName).as(String.class).orElse("vector");
 
-            CreateCollectionReq request = CreateCollectionReq.builder()
+            var request = CreateCollectionReq.builder()
                 .collectionName(rCollectionName)
                 .dimension(rDimension)
                 .description(rDescription)
-                .metricType(rMetricType.name())
+                .metricType(rMetricType.toSdk().name())
                 .primaryFieldName(rPrimaryFieldName)
-                .idType(rIdType)
+                .idType(rIdType.toSdk())
                 .autoID(rAutoId)
                 .vectorFieldName(rVectorFieldName)
                 .build();

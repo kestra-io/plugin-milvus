@@ -18,13 +18,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SearchTest extends MilvusTest {
 
     @BeforeEach
     void setUpCollection() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.createCollection(CreateCollectionReq.builder()
@@ -51,11 +49,10 @@ public class SearchTest extends MilvusTest {
 
     @Test
     void runFetch() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Search.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .vector(Property.ofValue(List.of(0.05, 0.61, 0.76, 0.74)))
             .limit(Property.ofValue(2))
@@ -72,11 +69,10 @@ public class SearchTest extends MilvusTest {
 
     @Test
     void runFetchOne() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Search.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .vector(Property.ofValue(List.of(0.05, 0.61, 0.76, 0.74)))
             .limit(Property.ofValue(1))
@@ -93,11 +89,10 @@ public class SearchTest extends MilvusTest {
 
     @Test
     void runStore() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Search.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .vector(Property.ofValue(List.of(0.05, 0.61, 0.76, 0.74)))
             .limit(Property.ofValue(2))
@@ -113,11 +108,10 @@ public class SearchTest extends MilvusTest {
 
     @Test
     void runWithFilter() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Search.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .vector(Property.ofValue(List.of(0.05, 0.61, 0.76, 0.74)))
             .filter(Property.ofValue("id == 1"))
@@ -129,12 +123,35 @@ public class SearchTest extends MilvusTest {
 
         assertThat(output, notNullValue());
         assertThat(output.getSize(), greaterThan(0L));
-        assertThat(output.getRows().get(0), notNullValue());
+        assertThat(output.getRows().getFirst(), notNullValue());
+    }
+
+    @Test
+    void runRenderedExpressions() throws Exception {
+        var runContext = runContextFactory.of(Map.of(
+            "inputs", Map.of(
+                "milvusUri", uri(),
+                "collection", collectionName,
+                "embedding", List.of(0.05, 0.61, 0.76, 0.74)
+            )
+        ));
+
+        var task = Search.builder()
+            .uri(Property.ofExpression("{{ inputs.milvusUri }}"))
+            .collectionName(Property.ofExpression("{{ inputs.collection }}"))
+            .vector(Property.ofExpression("{{ inputs.embedding }}"))
+            .limit(Property.ofValue(2))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, notNullValue());
+        assertThat(output.getSize(), is(2L));
     }
 
     @AfterEach
     void tearDown() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.dropCollection(DropCollectionReq.builder().collectionName(collectionName).build());

@@ -17,6 +17,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +58,8 @@ import java.util.Map;
 )
 public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output> {
     @Schema(
-        title = "Collection name"
+        title = "Collection name",
+        description = "The name of the collection to upsert rows into."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -65,23 +67,25 @@ public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output
 
     @Schema(
         title = "Rows to upsert",
-        description = "Row data source, either an inline list of maps or a Kestra internal storage URI to an ION file. Each row must include the collection's vector field as a list of numbers, its primary key field (unless the collection auto-generates IDs), and any dynamic scalar fields.",
+        description = """
+            Row data source, either an inline list of maps or a Kestra internal storage URI to an ION file. Each row must include the collection's vector field as a list of numbers, its primary key field (unless the collection auto-generates IDs), and any dynamic scalar fields.""",
         anyOf = {String.class, List.class, Map.class}
     )
     @NotNull
-    @PluginProperty(group = "main", dynamic = true)
+    @PluginProperty(group = "main", dynamic = true, internalStorageURI = true)
     private Object rows;
 
     @Schema(
         title = "Partition name",
-        description = "Optional partition to upsert the rows into."
+        description = "Optional partition to upsert the rows into. Defaults to the collection's default partition when not set."
     )
     @PluginProperty(group = "processing")
     private Property<String> partitionName;
 
     @Schema(
         title = "Batch size",
-        description = "The number of rows sent per upsert call."
+        description = """
+            The number of rows sent per upsert call. Defaults to 1000, and must be between 1 and 10000."""
     )
     @Builder.Default
     @PluginProperty(group = "processing")
@@ -93,17 +97,17 @@ public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output
         var rPartitionName = runContext.render(this.partitionName).as(String.class).orElse(null);
         var rBatchSize = runContext.render(this.batchSize).as(Integer.class).orElse(1000);
 
-        MilvusClientV2 client = this.buildClient(runContext);
+        var client = this.buildClient(runContext);
         try {
             long totalUpserted = 0;
-            List<JsonObject> batch = new java.util.ArrayList<>(rBatchSize);
+            var batch = new ArrayList<JsonObject>(rBatchSize);
 
             var rows = Data.from(this.rows).read(runContext).toIterable();
             for (Map<String, Object> row : rows) {
                 batch.add(toJsonObject(row));
                 if (batch.size() >= rBatchSize) {
                     totalUpserted += upsertBatch(client, rCollectionName, rPartitionName, batch);
-                    batch = new java.util.ArrayList<>(rBatchSize);
+                    batch = new ArrayList<>(rBatchSize);
                 }
             }
             if (!batch.isEmpty()) {
@@ -119,7 +123,7 @@ public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output
     }
 
     private static long upsertBatch(MilvusClientV2 client, String collectionName, String partitionName, List<JsonObject> batch) {
-        UpsertReq.UpsertReqBuilder requestBuilder = UpsertReq.builder()
+        var requestBuilder = UpsertReq.builder()
             .collectionName(collectionName)
             .data(batch);
         if (partitionName != null && !partitionName.isBlank()) {

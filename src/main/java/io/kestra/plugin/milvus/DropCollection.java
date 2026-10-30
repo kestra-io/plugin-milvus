@@ -7,7 +7,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
-import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.collection.request.DropCollectionReq;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -47,7 +46,8 @@ import lombok.experimental.SuperBuilder;
 )
 public class DropCollection extends AbstractMilvus implements RunnableTask<VoidOutput> {
     @Schema(
-        title = "Collection name"
+        title = "Collection name",
+        description = "The name of the collection to permanently delete."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -57,7 +57,7 @@ public class DropCollection extends AbstractMilvus implements RunnableTask<VoidO
     public VoidOutput run(RunContext runContext) throws Exception {
         var rCollectionName = runContext.render(this.collectionName).as(String.class).orElseThrow(() -> new IllegalArgumentException("'collectionName' is required"));
 
-        MilvusClientV2 client = this.buildClient(runContext);
+        var client = this.buildClient(runContext);
         try {
             client.dropCollection(DropCollectionReq.builder().collectionName(rCollectionName).build());
 

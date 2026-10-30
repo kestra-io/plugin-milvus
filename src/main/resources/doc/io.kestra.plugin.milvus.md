@@ -1,13 +1,18 @@
-# Milvus Plugin
+# How to use the Milvus plugin
 
 Use the Milvus plugin to manage vector collections, upsert embeddings, run similarity search, and delete rows in [Milvus](https://milvus.io/), an open-source vector database, or [Zilliz Cloud](https://zilliz.com/).
 
-## Connection
+## Authentication
 
-All tasks inherit common connection properties:
-- `uri`: The URI of the Milvus server or Zilliz Cloud endpoint, e.g. `http://localhost:19530` (required).
-- `token`: The API token for authentication, typically used with Zilliz Cloud or a Milvus instance with token-based auth enabled (optional, secret).
-- `username` / `password`: Credentials for a self-hosted Milvus instance with username/password authentication enabled (optional, `password` is secret).
+All tasks inherit common connection properties from `uri`, `token`, `username`, `password` and `databaseName`.
+
+- `token` is the API token for authentication, typically used with Zilliz Cloud or a Milvus instance with token-based auth enabled.
+- `username` / `password` are credentials for a self-hosted Milvus instance with username/password authentication enabled.
+
+`token` and `password` are alternative authentication methods, not to be combined — set one or the other depending on how your Milvus deployment is configured.
+
+`token` and `password` are secrets, so they should never be hardcoded in a flow. Store them using Kestra's [secrets](https://kestra.io/docs/concepts/secret) and reference them with `{{ secret('MILVUS_TOKEN') }}`, or set them once for every Milvus task in a namespace via [plugin defaults](https://kestra.io/docs/workflow-components/plugin-defaults).
+
 - `databaseName`: The Milvus database to operate against. Defaults to the server's default database when not set.
 
 ## Tasks

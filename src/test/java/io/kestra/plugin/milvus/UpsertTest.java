@@ -10,7 +10,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Map;
@@ -18,13 +17,11 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class UpsertTest extends MilvusTest {
 
     @BeforeEach
     void setUpCollection() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.createCollection(CreateCollectionReq.builder()
@@ -43,7 +40,6 @@ public class UpsertTest extends MilvusTest {
 
     @Test
     void run() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         List<Map<String, Object>> rows = List.of(
@@ -52,7 +48,7 @@ public class UpsertTest extends MilvusTest {
         );
 
         var task = Upsert.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .rows(rows)
             .batchSize(Property.ofValue(10))
@@ -66,10 +62,9 @@ public class UpsertTest extends MilvusTest {
 
     @Test
     void runUpsertFromInternalStorage() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
-        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
+        var tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new FileOutputStream(tempFile)) {
             FileSerde.write(output, Map.of("id", 10, "vector", List.of(0.05, 0.61, 0.76, 0.74)));
             FileSerde.write(output, Map.of("id", 11, "vector", List.of(0.19, 0.81, 0.75, 0.11)));
@@ -78,7 +73,7 @@ public class UpsertTest extends MilvusTest {
         var storageUri = runContext.storage().putFile(tempFile);
 
         var task = Upsert.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .rows(storageUri.toString())
             .batchSize(Property.ofValue(1))
@@ -90,9 +85,30 @@ public class UpsertTest extends MilvusTest {
         assertThat(output.getUpsertedCount(), is(2L));
     }
 
+    @Test
+    void runRenderedExpressions() throws Exception {
+        var runContext = runContextFactory.of(Map.of(
+            "inputs", Map.of(
+                "milvusUri", uri(),
+                "collection", collectionName
+            )
+        ));
+
+        var task = Upsert.builder()
+            .uri(Property.ofExpression("{{ inputs.milvusUri }}"))
+            .collectionName(Property.ofExpression("{{ inputs.collection }}"))
+            .rows(List.of(Map.of("id", 20, "vector", List.of(0.05, 0.61, 0.76, 0.74))))
+            .batchSize(Property.ofValue(10))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, notNullValue());
+        assertThat(output.getUpsertedCount(), is(1L));
+    }
+
     @AfterEach
     void tearDown() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.dropCollection(DropCollectionReq.builder().collectionName(collectionName).build());

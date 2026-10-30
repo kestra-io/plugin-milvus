@@ -10,13 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class DropCollectionTest extends MilvusTest {
 
     @BeforeEach
     void setUpCollection() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.createCollection(CreateCollectionReq.builder()
@@ -35,11 +33,10 @@ public class DropCollectionTest extends MilvusTest {
 
     @Test
     void run() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = DropCollection.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .build();
 

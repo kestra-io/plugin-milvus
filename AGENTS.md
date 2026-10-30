@@ -3,13 +3,13 @@
 ## What
 
 - Provides plugin components under `io.kestra.plugin.milvus`.
-- Includes classes such as `Example`, `Trigger`.
+- Includes classes `CreateCollection`, `Upsert`, `Search`, `Delete`, `DropCollection`.
 
 ## Why
 
-- What user problem does this solve? Teams need a concrete starting point for building and validating new Kestra plugins without recreating the same project scaffolding from scratch.
-- Why would a team adopt this plugin in a workflow? It gives plugin authors a ready-made reference repo they can adapt alongside their own build, test, and publishing workflow.
-- What operational/business outcome does it enable? It shortens plugin delivery time, reduces setup mistakes, and makes internal or partner plugin development more repeatable.
+- What user problem does this solve? Teams building RAG pipelines or semantic search need to manage Milvus vector collections and vector data as part of their Kestra workflows, without hand-rolling SDK calls.
+- Why would a team adopt this plugin in a workflow? It lets a Kestra flow create/drop collections, batch-upsert embeddings, run approximate nearest-neighbor search, and delete rows against a Milvus server or Zilliz Cloud endpoint declaratively.
+- What operational/business outcome does it enable? It allows vector-database maintenance and ingestion to be orchestrated, scheduled, and observed alongside the rest of a data or AI pipeline instead of living in separate scripts.
 
 ## How
 
@@ -19,13 +19,18 @@ Single-module plugin. Source packages under `io.kestra.plugin`:
 
 - `milvus`
 
-Infrastructure dependencies (Docker Compose services):
+Infrastructure dependencies (integration tests use Testcontainers):
 
-- `app`
+- `milvusdb/milvus` (via `org.testcontainers:milvus`)
 
 ### Key Plugin Classes
 
-- `io.kestra.plugin.milvus.Example`
+- `io.kestra.plugin.milvus.AbstractMilvus`: Base class holding shared connection properties (`uri`, `token`, `username`, `password`, `databaseName`) and building the Milvus SDK client.
+- `io.kestra.plugin.milvus.CreateCollection`: Creates a collection using Milvus's quick-setup schema.
+- `io.kestra.plugin.milvus.Upsert`: Inserts or updates rows in batches.
+- `io.kestra.plugin.milvus.Search`: Runs an approximate nearest-neighbor vector similarity search.
+- `io.kestra.plugin.milvus.Delete`: Deletes rows by primary key IDs or a scalar filter expression.
+- `io.kestra.plugin.milvus.DropCollection`: Permanently deletes a collection.
 
 ### Project Structure
 

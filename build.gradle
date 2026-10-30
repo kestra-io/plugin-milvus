@@ -21,7 +21,7 @@ repositories {
     }
 }
 
-final targetJavaVersion = JavaVersion.VERSION_25
+final targetJavaVersion = JavaVersion.VERSION_21
 
 java {
     sourceCompatibility = targetJavaVersion
@@ -90,12 +90,9 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
-    // Aligned with Kestra core's Testcontainers version. org.testcontainers:milvus has not
-    // been republished under the testcontainers- prefix for the 2.0 line yet (still capped
-    // at 1.21.4 on Maven Central), so the container itself is inlined — see
-    // EmbeddedMilvusContainer.java.
-    testImplementation "org.testcontainers:testcontainers:2.0.5"
-    testImplementation "org.testcontainers:testcontainers-junit-jupiter:2.0.5"
+    testImplementation "org.testcontainers:testcontainers:1.21.4"
+    testImplementation "org.testcontainers:milvus:1.21.4"
+    testImplementation "org.testcontainers:junit-jupiter:1.21.4"
 }
 
 /**********************************************************************************************************************\

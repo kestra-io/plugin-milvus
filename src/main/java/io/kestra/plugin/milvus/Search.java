@@ -8,10 +8,10 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchOutput;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.FileSerde;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
-import io.milvus.v2.service.vector.response.SearchResp;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -19,6 +19,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,7 +58,8 @@ import java.util.Map;
 )
 public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> {
     @Schema(
-        title = "Collection name"
+        title = "Collection name",
+        description = "The name of the collection to search."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -67,12 +70,13 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
         description = "The dense vector to search nearest neighbors for, as a list of numbers matching the collection's vector dimension."
     )
     @NotNull
-    @PluginProperty(group = "main", dynamic = true)
+    @PluginProperty(group = "main")
     private Property<List<Double>> vector;
 
     @Schema(
         title = "Result limit",
-        description = "The maximum number of nearest neighbors to return."
+        description = """
+            The maximum number of nearest neighbors to return. Defaults to 10, and must be between 1 and 16384."""
     )
     @Builder.Default
     @PluginProperty(group = "main")
@@ -80,28 +84,29 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
     @Schema(
         title = "Scalar filter expression",
-        description = "A Milvus boolean filter expression narrowing the search to rows matching the condition, e.g. \"city == 'Berlin'\"."
+        description = "A Milvus boolean filter expression narrowing the search to rows matching the condition, e.g. \"city == 'Berlin'\". Unset by default (no filter applied)."
     )
-    @PluginProperty(group = "processing", dynamic = true)
+    @PluginProperty(group = "processing")
     private Property<String> filter;
 
     @Schema(
         title = "Output fields",
-        description = "Scalar fields to include in each result's entity map, in addition to the primary key and score."
+        description = "Scalar fields to include in each result's entity map, in addition to the primary key and score. Defaults to none."
     )
     @PluginProperty(group = "processing")
     private Property<List<String>> outputFields;
 
     @Schema(
         title = "Partition names",
-        description = "Optional partitions to scope the search to."
+        description = "Optional partitions to scope the search to. Defaults to searching every partition."
     )
     @PluginProperty(group = "processing")
     private Property<List<String>> partitionNames;
 
     @Schema(
         title = "Fetch type",
-        description = "How search results are returned: FETCH_ONE for the single best match, FETCH for all matches inline, STORE to write all matches to internal storage and return a URI."
+        description = """
+            How search results are returned: FETCH_ONE for the single best match, FETCH for all matches inline, STORE to write all matches to internal storage and return a URI. Defaults to FETCH."""
     )
     @Builder.Default
     @PluginProperty(group = "main")
@@ -122,9 +127,9 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
         List<Float> queryVector = rVector.stream().map(Double::floatValue).toList();
 
-        MilvusClientV2 client = this.buildClient(runContext);
+        var client = this.buildClient(runContext);
         try {
-            SearchReq.SearchReqBuilder requestBuilder = SearchReq.builder()
+            var requestBuilder = SearchReq.builder()
                 .collectionName(rCollectionName)
                 .data(List.of(new FloatVec(queryVector)))
                 .limit(rLimit);
@@ -138,12 +143,12 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
                 requestBuilder.partitionNames(rPartitionNames);
             }
 
-            SearchResp response = client.search(requestBuilder.build());
+            var response = client.search(requestBuilder.build());
 
             List<Map<String, Object>> rows = new ArrayList<>();
             if (!response.getSearchResults().isEmpty()) {
-                for (SearchResp.SearchResult result : response.getSearchResults().get(0)) {
-                    Map<String, Object> row = new LinkedHashMap<>();
+                for (var result : response.getSearchResults().getFirst()) {
+                    var row = new LinkedHashMap<String, Object>();
                     row.put("id", result.getId());
                     row.put("score", result.getScore());
                     row.putAll(result.getEntity());
@@ -154,13 +159,13 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
             return switch (rFetchType) {
                 case FETCH_ONE -> FetchOutput.builder()
                     .size(rows.isEmpty() ? 0L : 1L)
-                    .row(rows.isEmpty() ? null : rows.get(0))
+                    .row(rows.isEmpty() ? null : rows.getFirst())
                     .build();
                 case STORE -> {
                     var tempFile = runContext.workingDir().createTempFile(".ion").toFile();
-                    try (var output = new java.io.BufferedOutputStream(new java.io.FileOutputStream(tempFile))) {
-                        for (Map<String, Object> row : rows) {
-                            io.kestra.core.serializers.FileSerde.write(output, row);
+                    try (var output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                        for (var row : rows) {
+                            FileSerde.write(output, row);
                         }
                         output.flush();
                     }

@@ -18,13 +18,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class DeleteTest extends MilvusTest {
 
     @BeforeEach
     void setUpCollection() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.createCollection(CreateCollectionReq.builder()
@@ -51,11 +49,10 @@ public class DeleteTest extends MilvusTest {
 
     @Test
     void runDeleteByIds() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Delete.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .ids(Property.ofValue(List.of(1)))
             .build();
@@ -80,11 +77,10 @@ public class DeleteTest extends MilvusTest {
 
     @Test
     void runDeleteByFilter() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Delete.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .filter(Property.ofValue("id == 2"))
             .build();
@@ -92,6 +88,7 @@ public class DeleteTest extends MilvusTest {
         var output = task.run(runContext);
 
         assertThat(output, notNullValue());
+        assertThat(output.getDeletedCount(), is(1L));
 
         var client = milvusClient();
         try {
@@ -108,20 +105,40 @@ public class DeleteTest extends MilvusTest {
 
     @Test
     void runRequiresExactlyOneOfIdsOrFilter() throws Exception {
-        assumeTrue(isMilvusAvailable());
         var runContext = runContextFactory.of();
 
         var task = Delete.builder()
-            .uri(Property.ofValue(uri))
+            .uri(Property.ofValue(uri()))
             .collectionName(Property.ofValue(collectionName))
             .build();
 
         assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
     }
 
+    @Test
+    void runRenderedExpressions() throws Exception {
+        var runContext = runContextFactory.of(Map.of(
+            "inputs", Map.of(
+                "milvusUri", uri(),
+                "collection", collectionName,
+                "filter", "id == 2"
+            )
+        ));
+
+        var task = Delete.builder()
+            .uri(Property.ofExpression("{{ inputs.milvusUri }}"))
+            .collectionName(Property.ofExpression("{{ inputs.collection }}"))
+            .filter(Property.ofExpression("{{ inputs.filter }}"))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, notNullValue());
+        assertThat(output.getDeletedCount(), is(1L));
+    }
+
     @AfterEach
     void tearDown() {
-        if (!isMilvusAvailable()) return;
         var client = milvusClient();
         try {
             client.dropCollection(DropCollectionReq.builder().collectionName(collectionName).build());

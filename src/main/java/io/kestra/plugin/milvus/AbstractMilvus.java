@@ -1,12 +1,14 @@
 package io.kestra.plugin.milvus;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,7 +27,6 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractMilvus extends Task implements MilvusConnectionInterface {
-    private static final Gson GSON = new Gson();
 
     @Schema(
         title = "Milvus server URI",
@@ -72,7 +73,7 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
         var rPassword = runContext.render(this.password).as(String.class).orElse(null);
         var rDatabaseName = runContext.render(this.databaseName).as(String.class).orElse(null);
 
-        ConnectConfig.ConnectConfigBuilder configBuilder = ConnectConfig.builder().uri(rUri);
+        var configBuilder = ConnectConfig.builder().uri(rUri);
         if (rToken != null && !rToken.isBlank()) {
             configBuilder.token(rToken);
         }
@@ -89,11 +90,7 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
         return new MilvusClientV2(configBuilder.build());
     }
 
-    protected static JsonObject toJsonObject(Map<String, Object> map) {
-        return GSON.toJsonTree(map).getAsJsonObject();
-    }
-
-    protected static Map<String, Object> fromJsonObject(JsonObject jsonObject) {
-        return GSON.fromJson(jsonObject, Map.class);
+    protected static JsonObject toJsonObject(Map<String, Object> map) throws JsonProcessingException {
+        return JsonParser.parseString(JacksonMapper.ofJson().writeValueAsString(map)).getAsJsonObject();
     }
 }
