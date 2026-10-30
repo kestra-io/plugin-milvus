@@ -77,7 +77,8 @@ public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output
 
     @Schema(
         title = "Partition name",
-        description = "Optional partition to upsert the rows into. Defaults to the collection's default partition when not set."
+        description = """
+            Optional partition to upsert the rows into. Defaults to the collection's default partition when not set."""
     )
     @PluginProperty(group = "processing")
     private Property<String> partitionName;
@@ -99,11 +100,11 @@ public class Upsert extends AbstractMilvus implements RunnableTask<Upsert.Output
 
         var client = this.buildClient(runContext);
         try {
-            long totalUpserted = 0;
+            var totalUpserted = 0L;
             var batch = new ArrayList<JsonObject>(rBatchSize);
 
             var rows = Data.from(this.rows).read(runContext).toIterable();
-            for (Map<String, Object> row : rows) {
+            for (var row : rows) {
                 batch.add(toJsonObject(row));
                 if (batch.size() >= rBatchSize) {
                     totalUpserted += upsertBatch(client, rCollectionName, rPartitionName, batch);

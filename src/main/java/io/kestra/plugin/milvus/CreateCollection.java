@@ -7,7 +7,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
-import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -65,7 +64,8 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Collection description",
-        description = "A free-text description of the collection, stored as Milvus collection metadata. Defaults to empty."
+        description = """
+            A free-text description of the collection, stored as Milvus collection metadata. Defaults to empty."""
     )
     @PluginProperty(group = "main")
     private Property<String> collectionDescription;
@@ -81,7 +81,8 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Primary field name",
-        description = "The name of the primary key field. Defaults to \"id\"."
+        description = """
+            The name of the primary key field. Defaults to "id"."""
     )
     @Builder.Default
     @PluginProperty(group = "processing")
@@ -98,7 +99,8 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Auto-generate IDs",
-        description = "When true, Milvus assigns the primary key automatically and it must be omitted on insert. Only valid when idType is INT64. Defaults to false."
+        description = """
+            When true, Milvus assigns the primary key automatically and it must be omitted on insert. Only valid when idType is INT64. Defaults to false."""
     )
     @Builder.Default
     @PluginProperty(group = "processing")
@@ -106,7 +108,8 @@ public class CreateCollection extends AbstractMilvus implements RunnableTask<Voi
 
     @Schema(
         title = "Vector field name",
-        description = "The name of the vector field. Defaults to \"vector\"."
+        description = """
+            The name of the vector field. Defaults to "vector"."""
     )
     @Builder.Default
     @PluginProperty(group = "processing")

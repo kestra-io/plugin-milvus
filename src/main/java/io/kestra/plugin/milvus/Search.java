@@ -9,7 +9,6 @@ import io.kestra.core.models.tasks.common.FetchOutput;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -91,14 +90,16 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
     @Schema(
         title = "Output fields",
-        description = "Scalar fields to include in each result's entity map, in addition to the primary key and score. Defaults to none."
+        description = """
+            Scalar fields to include in each result's entity map, in addition to the primary key and score. Defaults to none."""
     )
     @PluginProperty(group = "processing")
     private Property<List<String>> outputFields;
 
     @Schema(
         title = "Partition names",
-        description = "Optional partitions to scope the search to. Defaults to searching every partition."
+        description = """
+            Optional partitions to scope the search to. Defaults to searching every partition."""
     )
     @PluginProperty(group = "processing")
     private Property<List<String>> partitionNames;
@@ -125,7 +126,7 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
         var rPartitionNames = runContext.render(this.partitionNames).asList(String.class);
         var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
 
-        List<Float> queryVector = rVector.stream().map(Double::floatValue).toList();
+        var queryVector = rVector.stream().map(Double::floatValue).toList();
 
         var client = this.buildClient(runContext);
         try {
@@ -145,7 +146,7 @@ public class Search extends AbstractMilvus implements RunnableTask<FetchOutput> 
 
             var response = client.search(requestBuilder.build());
 
-            List<Map<String, Object>> rows = new ArrayList<>();
+            var rows = new ArrayList<Map<String, Object>>();
             if (!response.getSearchResults().isEmpty()) {
                 for (var result : response.getSearchResults().getFirst()) {
                     var row = new LinkedHashMap<String, Object>();

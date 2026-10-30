@@ -30,7 +30,8 @@ public interface MilvusConnectionInterface {
 
     @Schema(
         title = "Database name",
-        description = "The Milvus database to operate against. Defaults to the server's default database when not set."
+        description = """
+            The Milvus database to operate against. Defaults to the server's default database when not set."""
     )
     Property<String> getDatabaseName();
 }

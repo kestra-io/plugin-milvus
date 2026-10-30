@@ -70,21 +70,24 @@ public class Delete extends AbstractMilvus implements RunnableTask<Delete.Output
 
     @Schema(
         title = "Primary key IDs to delete",
-        description = "A list of primary key values to delete. Mutually exclusive with filter. Unset by default."
+        description = """
+            A list of primary key values to delete. Mutually exclusive with filter. Unset by default."""
     )
     @PluginProperty(group = "main")
     private Property<List<Object>> ids;
 
     @Schema(
         title = "Scalar filter expression",
-        description = "A Milvus boolean filter expression; every row matching it is deleted. Mutually exclusive with ids. Unset by default."
+        description = """
+            A Milvus boolean filter expression; every row matching it is deleted. Mutually exclusive with ids. Unset by default."""
     )
     @PluginProperty(group = "main")
     private Property<String> filter;
 
     @Schema(
         title = "Partition name",
-        description = "Optional partition to scope the delete to. Defaults to every partition."
+        description = """
+            Optional partition to scope the delete to. Defaults to every partition."""
     )
     @PluginProperty(group = "processing")
     private Property<String> partitionName;
@@ -96,8 +99,8 @@ public class Delete extends AbstractMilvus implements RunnableTask<Delete.Output
         var rFilter = runContext.render(this.filter).as(String.class).orElse(null);
         var rPartitionName = runContext.render(this.partitionName).as(String.class).orElse(null);
 
-        boolean hasIds = !rIds.isEmpty();
-        boolean hasFilter = rFilter != null && !rFilter.isBlank();
+        var hasIds = !rIds.isEmpty();
+        var hasFilter = rFilter != null && !rFilter.isBlank();
         if (hasIds == hasFilter) {
             throw new IllegalArgumentException("Exactly one of 'ids' or 'filter' must be set, got " + (hasIds ? "both" : "neither"));
         }
@@ -114,7 +117,7 @@ public class Delete extends AbstractMilvus implements RunnableTask<Delete.Output
                 requestBuilder.partitionName(rPartitionName);
             }
 
-            long deletedCount = client.delete(requestBuilder.build()).getDeleteCnt();
+            var deletedCount = client.delete(requestBuilder.build()).getDeleteCnt();
 
             runContext.logger().info("Deleted {} row(s) from collection '{}'", deletedCount, rCollectionName);
 

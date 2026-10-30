@@ -4,6 +4,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.serializers.FileSerde;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
+import io.milvus.v2.exception.MilvusClientException;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DropCollectionReq;
 import org.junit.jupiter.api.AfterEach;
@@ -11,12 +12,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileOutputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UpsertTest extends MilvusTest {
 
@@ -83,6 +87,49 @@ public class UpsertTest extends MilvusTest {
 
         assertThat(output, notNullValue());
         assertThat(output.getUpsertedCount(), is(2L));
+    }
+
+    @Test
+    void runUpsertFromInternalStorageWithTemporalField() throws Exception {
+        var runContext = runContextFactory.of();
+
+        var tempFile = runContext.workingDir().createTempFile(".ion").toFile();
+        try (var output = new FileOutputStream(tempFile)) {
+            FileSerde.write(output, Map.of(
+                "id", 40,
+                "vector", List.of(0.05, 0.61, 0.76, 0.74),
+                "createdAt", Instant.parse("2024-01-01T00:00:00Z")
+            ));
+        }
+
+        var storageUri = runContext.storage().putFile(tempFile);
+
+        var task = Upsert.builder()
+            .uri(Property.ofValue(uri()))
+            .collectionName(Property.ofValue(collectionName))
+            .rows(storageUri.toString())
+            .batchSize(Property.ofValue(1))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, notNullValue());
+        assertThat(output.getUpsertedCount(), is(1L));
+    }
+
+    @Test
+    void runUpsertWithMismatchedVectorDimensionThrows() {
+        var runContext = runContextFactory.of();
+
+        var task = Upsert.builder()
+            .uri(Property.ofValue(uri()))
+            .collectionName(Property.ofValue(collectionName))
+            .rows(List.of(Map.of("id", 50, "vector", List.of(0.05, 0.61, 0.76))))
+            .batchSize(Property.ofValue(10))
+            .build();
+
+        var exception = assertThrows(MilvusClientException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("dim"));
     }
 
     @Test

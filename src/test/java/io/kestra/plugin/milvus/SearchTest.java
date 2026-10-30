@@ -4,6 +4,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
+import io.milvus.v2.exception.MilvusClientException;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DropCollectionReq;
 import io.milvus.v2.service.vector.request.UpsertReq;
@@ -15,9 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SearchTest extends MilvusTest {
 
@@ -104,6 +107,22 @@ public class SearchTest extends MilvusTest {
         assertThat(output, notNullValue());
         assertThat(output.getSize(), is(2L));
         assertThat(output.getUri(), notNullValue());
+    }
+
+    @Test
+    void runWithMismatchedVectorDimensionThrows() {
+        var runContext = runContextFactory.of();
+
+        var task = Search.builder()
+            .uri(Property.ofValue(uri()))
+            .collectionName(Property.ofValue(collectionName))
+            .vector(Property.ofValue(List.of(0.05, 0.61, 0.76)))
+            .limit(Property.ofValue(2))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .build();
+
+        var exception = assertThrows(MilvusClientException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("vector dimension mismatch"));
     }
 
     @Test

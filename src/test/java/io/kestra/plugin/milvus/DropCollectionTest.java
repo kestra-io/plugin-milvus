@@ -46,10 +46,24 @@ public class DropCollectionTest extends MilvusTest {
 
         var client = milvusClient();
         try {
-            boolean exists = client.hasCollection(HasCollectionReq.builder().collectionName(collectionName).build());
+            var exists = client.hasCollection(HasCollectionReq.builder().collectionName(collectionName).build());
             assertThat(exists, is(false));
         } finally {
             client.close();
         }
+    }
+
+    @Test
+    void runOnNonExistentCollectionIsIdempotent() throws Exception {
+        var runContext = runContextFactory.of();
+
+        var task = DropCollection.builder()
+            .uri(Property.ofValue(uri()))
+            .collectionName(Property.ofValue(collectionName + "_never_created"))
+            .build();
+
+        var output = task.run(runContext);
+
+        assertThat(output, is((Object) null));
     }
 }

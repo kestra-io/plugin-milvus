@@ -61,7 +61,8 @@ public abstract class AbstractMilvus extends Task implements MilvusConnectionInt
 
     @Schema(
         title = "Database name",
-        description = "The Milvus database to operate against. Defaults to the server's default database when not set."
+        description = """
+            The Milvus database to operate against. Defaults to the server's default database when not set."""
     )
     @PluginProperty(group = "connection")
     protected Property<String> databaseName;
